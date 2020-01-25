@@ -13,6 +13,42 @@ function(input, output){
                                    .$Bronze, ' Bronze'))
   })
   
+  BioReactive1 <- reactive({ #Reactive for tab 1 of the biometrics
+    if(input$monlybio1 == FALSE){
+      regionadded %>%
+        filter(., Year >= input$slideryearsbio1[1] & Year <= input$slideryearsbio1[2]) %>%
+        group_by(., Sport, Sex) %>%
+        summarise(., AvgWeight = mean(Weight, na.rm = TRUE), AvgHeight = mean(Height, na.rm = TRUE))
+    } else regionadded %>%
+      filter(., is.na(Medal) == FALSE) %>%
+      filter(., Year >= input$slideryearsbio1[1] & Year <= input$slideryearsbio1[2]) %>%
+      group_by(., Sport, Sex) %>%
+      summarise(., AvgWeight = mean(Weight, na.rm = TRUE), AvgHeight = mean(Height, na.rm = TRUE))
+    
+  })
+  
+  BioReactive2 <- reactive({ #Reactive for tab 2 of the biometrics
+    if(input$monlybio2 == FALSE){
+      regionadded %>%
+        filter(., Year >= input$slideryearsbio2[1] & Year <= input$slideryearsbio2[2])
+    } else regionadded %>%
+      filter(., is.na(Medal) == FALSE) %>%
+      filter(., Year >= input$slideryearsbio2[1] & Year <= input$slideryearsbio2[2])
+
+  })
+  
+  BioReactive3 <- reactive({ #Reactive for tab 3 of the biometrics
+    if(input$monlybio3 == FALSE){
+      regionadded %>%
+        group_by(., Sport, Year, Sex) %>%
+        summarise(., AvgWeight = mean(Weight, na.rm = TRUE), AvgHeight = mean(Height, na.rm = TRUE))
+    } else regionadded %>%
+      filter(., is.na(Medal) == FALSE) %>%
+      group_by(., Sport, Year, Sex) %>%
+      summarise(., AvgWeight = mean(Weight, na.rm = TRUE), AvgHeight = mean(Height, na.rm = TRUE))
+    
+  })
+  
   output$map = renderGvis(
     gvisGeoChart(regionMedalsMapRange(), locationvar = 'region', 
                       colorvar = 'Medalists', 
@@ -31,7 +67,54 @@ function(input, output){
       scale_x_continuous(breaks=seq(1896, 2016, 4)) + 
       theme(axis.text.x = element_text(angle=45))
   )
-
+  
+  output$bioplot = renderPlotly({
+    ggplot(BioReactive1(), aes(x = AvgWeight, y = AvgHeight, label = Sport)) + 
+      geom_point(aes(color = Sex)) + 
+      xlab('Average Weight (kg)') +
+      ylab('Average Height (cm)') +
+      theme_economist()
+   
+     })
+  
+  output$bioSportHeight = renderPlot(
+    ggplot(subset(BioReactive2(), Sport == input$bioSport1), aes(x = Sex, y = Height)) + 
+      geom_boxplot(aes(fill = Sex)) + 
+      theme_economist() + 
+      stat_boxplot(geom ='errorbar', width = 0.6) + 
+      xlab('') +
+      ylab('Height (cm)') +
+      theme(axis.text.x = element_blank(),
+            axis.title.y = element_text(size = 12))
+    
+  )
+  
+  output$bioSportWeight = renderPlot(
+    ggplot(subset(BioReactive2(), Sport == input$bioSport1), aes(x = Sex, y = Weight)) + 
+      geom_boxplot(aes(fill = Sex)) + 
+      theme_economist() + 
+      stat_boxplot(geom ='errorbar', width = 0.6) + 
+      xlab('') +
+      ylab('Weight (kg)') +
+      theme(axis.text.x = element_blank(),
+            axis.title.y = element_text(size = 12))
+  
+)
+  output$bioYearWeight = renderPlot(
+    ggplot(BioReactive3(), aes(x = Year, y =  AvgWeight)) + 
+      geom_line(data = filter(BioReactive3(), Sport %in% input$bioSportYear), aes(color = Sport)) +
+      xlab('') +
+      ylab('Weight (kg)') +
+      theme(axis.text.x = element_text(angle=45))
+  )
+  
+  output$bioYearHeight = renderPlot(
+    ggplot(BioReactive3(), aes(x = Year, y =  AvgHeight)) + 
+      geom_line(data = filter(BioReactive3(), Sport %in% input$bioSportYear), aes(color = Sport)) +
+      xlab('') +
+      ylab('Height (cm)') +
+      theme(axis.text.x = element_text(angle=45))
+  )
   
   
   output$table <- DT::renderDataTable({

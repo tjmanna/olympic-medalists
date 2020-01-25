@@ -7,7 +7,6 @@ dashboardPage(
     sidebarMenu(
       menuItem('Map', tabName = 'map', icon=icon('map')),
       menuItem('Time Series', tabName = 'time', icon = icon('calendar-alt')),
-      menuItem('Sports', tabName = 'sports', icon = icon('futbol')),
       menuItem('Biometrics', tabName = 'bio', icon = icon('heartbeat')),
       menuItem('Data', tabName= 'data', icon = icon('database'))
     ),
@@ -32,11 +31,29 @@ dashboardPage(
   ),
   tabItem(tabName = 'bio',
           fluidRow(h2('Biometrics of Olympic Competitors')),
-          fluidRow(box('plot goes here')),
-          fluidRow(box(sliderInput('slideryearsbio', label = h4('Range of Years'), min = 1896,
-                                   max = 2016, value = c(1896, 2016), step = 4, sep = ''), 
-                       checkboxInput('monlypoint', label = 'Medalists Only', value = FALSE)),
-                   )
+          fluidRow(tabBox(title = 'Select Biometrics Analysis',
+            tabPanel('Overall by Sport', plotlyOutput('bioplot'), 
+                     checkboxInput('monlybio1', label = 'Medalists Only', value = FALSE),
+                     sliderInput('slideryearsbio1', label = h4('Range of Years'), min = 1896,
+                                 max = 2016, value = c(1896, 2016), step = 4, sep = '')
+                     ),
+            tabPanel('Individual Sport', 
+                     selectInput('bioSport1', 'Choose Sport to Examine', unique(regionadded$Sport), selectize = TRUE),
+                     box(plotOutput('bioSportHeight')),
+                     box(plotOutput('bioSportWeight')),
+                     checkboxInput('monlybio2', label = 'Medalists Only', value = FALSE),
+                     sliderInput('slideryearsbio2', label = h4('Range of Years'), min = 1896,
+                                 max = 2016, value = c(1896, 2016), step = 4, sep = '')
+              
+            ),
+            tabPanel('Sport by Year',
+                     selectInput('bioSportYear', 'Choose Sport(s) to Examine', unique(regionadded$Sport), multiple = TRUE, selectize = TRUE),
+                     box(plotOutput('bioYearHeight')),
+                     box(plotOutput('bioYearWeight')),
+                     checkboxInput('monlybio3', label = 'Medalists Only', value = FALSE)
+              
+            ),width = 1000))
+          
     
   ),
   tabItem(tabName = 'data',
