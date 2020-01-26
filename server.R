@@ -1,6 +1,6 @@
 function(input, output){
   
-  regionMedalsMapRange <- reactive({ 
+  regionMedalsMapRange <- reactive({ #Reactive for Year Slider on Map
     byevent %>%
       filter(., Year >= input$slideryearsmap[1] & Year <= input$slideryearsmap[2]) %>%
       group_by(., region) %>%
@@ -47,6 +47,16 @@ function(input, output){
       group_by(., Sport, Year, Sex) %>%
       summarise(., AvgWeight = mean(Weight, na.rm = TRUE), AvgHeight = mean(Height, na.rm = TRUE))
     
+  })
+  
+  output$homelist <- renderUI({
+    HTML(paste("Select Map to compare medals won globally, with adjustable focus and timescale.", 
+               "Select Time Series to compare medals won by nations over time",
+               'Select Biometrics to see average basic physical information for athletes in a given sport, 
+               and how those averages changed over time.',
+               'Select Medalists to generate a profile with medals won by any decorated Olympian.',
+               'Select Data to see the raw dataset used to produce this app.',
+               sep="<br/><br/>"))
   })
   
   output$map = renderGvis(
@@ -102,20 +112,39 @@ function(input, output){
 )
   output$bioYearWeight = renderPlot(
     ggplot(BioReactive3(), aes(x = Year, y =  AvgWeight)) + 
-      geom_line(data = filter(BioReactive3(), Sport %in% input$bioSportYear), aes(color = Sport)) +
+      geom_line(data = filter(BioReactive3(), Sport %in% input$bioSportYear), aes(color = Sex)) +
       xlab('') +
       ylab('Weight (kg)') +
-      theme(axis.text.x = element_text(angle=45))
+      theme(axis.text.x = element_text(angle=45)) +
+      theme_economist()
   )
   
   output$bioYearHeight = renderPlot(
     ggplot(BioReactive3(), aes(x = Year, y =  AvgHeight)) + 
-      geom_line(data = filter(BioReactive3(), Sport %in% input$bioSportYear), aes(color = Sport)) +
+      geom_line(data = filter(BioReactive3(), Sport %in% input$bioSportYear), aes(color = Sex)) +
       xlab('') +
       ylab('Height (cm)') +
-      theme(axis.text.x = element_text(angle=45))
+      theme(axis.text.x = element_text(angle=45)) +
+      theme_economist()
   )
   
+  output$medaltable = renderTable({
+    medalsonly %>%
+      filter(., Name == input$athleteselect) %>%
+      arrange(., Year) %>%
+      select(., Olympics, Event, Medal)
+  })
+  
+  output$profile = renderTable({
+    medalsonly %>%
+      filter(., Name == input$athleteselect) %>%
+      arrange(., desc(Year)) %>%
+      summarise(., Team = first(region), 
+                Sport = first(Sport), 
+                Age = first(Age), 
+                'Height (cm)' = first(Height), 
+                'Weight (kg)' = first(Weight))
+  })
   
   output$table <- DT::renderDataTable({
     datatable(regionadded, rownames=FALSE, options = list(scrollX = TRUE)) %>%
