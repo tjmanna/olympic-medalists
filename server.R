@@ -51,7 +51,7 @@ function(input, output){
   
   output$homelist <- renderUI({
     HTML(paste("Select Map to compare medals won globally, with adjustable focus and timescale.", 
-               "Select Time Series to compare medals won by nations over time",
+               "Select Time Series to compare medals won by nations over time.",
                'Select Biometrics to see average basic physical information for athletes in a given sport, 
                and how those averages changed over time.',
                'Select Medalists to generate a profile with medals won by any decorated Olympian.',

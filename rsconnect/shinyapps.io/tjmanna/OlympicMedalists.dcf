@@ -1,0 +1,12 @@
+name: OlympicMedalists
+title: OlympicMedalists
+username:
+account: tjmanna
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 1705814
+bundleId: 2754449
+url: https://tjmanna.shinyapps.io/OlympicMedalists/
+when: 1580066393.92677
+asMultiple: FALSE
+asStatic: FALSE
