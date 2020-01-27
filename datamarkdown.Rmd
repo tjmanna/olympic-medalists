@@ -1,0 +1,112 @@
+---
+title: "OlympicMedalistMarkdown"
+author: "Tommy Manna"
+date: "1/25/2020"
+output: html_document
+---
+
+We are examining all historic Olympic results with particular focus on medals won by country as well as biometrics per sport category.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(shiny)
+library(shinydashboard)
+library(DT)
+library(ggplot2)
+library(dplyr)
+library(googleVis)
+library(tidyr)
+library(ggthemes)
+library(plotly) #Provides functionality for the interactive biometrics plot
+```
+
+##Intial Setup
+
+First thing we do is load in the raw dataset, rows are all Athlete participaitons in all Events, it contains the following columns:
+- ID (row index)
+- Name of athlete
+- Sex of athlete
+- Age of athlete
+- Height of athlete
+- Weight of athlete
+- Team (Actually not very helpful for mapping to country, there are such teams as "United States 2" for instace)
+- NOC (Three letter code pertaining to nation, MUCH more helpful especially with the 'regionkey' dataset coming up)
+- Games (presented as <year> <season>)
+- Year
+- Season
+- City
+- Sport (usually a category containing multiple associated events)
+- Event (specific competition)
+- Medal (What medal won, if any)
+
+We also load the noc_regions csv under the name regionkey, which is essentially a key:value set with NOC and associated nation, making a leftjoin to generate the 'region' column a breeze.
+
+Finally, I add one last column (Olympics) just by pasting City and Year, for better representation of the games in later outputs. 
+
+
+```{r}
+rawdata <- read.csv('athlete_events.csv', stringsAsFactors = FALSE)
+regionkey <- read.csv('noc_regions.csv', stringsAsFactors = FALSE)
+regionadded <-left_join(rawdata, regionkey, by = 'NOC')
+regionadded <- mutate(regionadded, Olympics = paste(regionadded$City, regionadded$Year))
+```
+
+## Cleaning and Separating Datsets
+
+Next thing I do is simply change the USA and UK values under the region column to strings that will later be recognized by the googleVis Geochart.
+
+Then, for later use, I make a version of the dataset that only includes rows with a value in the medal column, medal winning events only. 
+
+There were some NAs in region, and luckily I was able to manually confirm that they were all under one NOC code missing from the regionkey that is associated with Singapore, so a manual replacement of NAs was straightforward.
+
+The resulting dataset containing all athletes is stored as byathlete, however I want to make sure to compare medals won between nations more fairly (i.e., one medal for each member in a team sport should not have that much more magnitude in comparison). So, I select only the columns not pertaining to the athlete's personal information, and so team sports create perfectly duplicate rows. Taking the unique rows from this gives us the fair comparison dataset.
+
+
+```{r}
+regionadded$region <- replace(regionadded$region, regionadded$region == 'USA', 'United States' )
+regionadded$region <- replace(regionadded$region, regionadded$region == 'UK', 'United Kingdom' )
+medalsonly <- filter(regionadded, is.na(regionadded$Medal) == FALSE) #medal winning rows only
+medalsonly <- replace_na(medalsonly, list(region = 'Singapore')) #some Singapore region columns weren't generated
+byathlete <- medalsonly
+byevent <- medalsonly %>%
+  select(., Games, Year, Season, City, Sport, Event, Medal, region, Olympics) %>%
+  distinct(.)
+```
+
+
+
+In order to create the Geochart like I wanted, I needed to generate some new columns. By grouping by region and summarizing the number of each medal's instaces, we get medal counts for each region. Also, the raw n() of each region (in the medalsonly dataset) can give you the total number of medalists. 
+
+I also paste the region value, a colon, and the number of each medal followed by the medal as a string in order to generate a string that will be a suitable hover variable for the geochart (for example, "United States: 10 Gold, 9 Silver, 2, Bronze")
+
+
+```{r}
+regionmedals <- byevent %>% #creating individual medal counts
+  group_by(., region) %>%
+  summarise(., Gold = sum(Medal == 'Gold'), 
+            Silver = sum(Medal == 'Silver'),
+            Bronze = sum(Medal == 'Bronze'),
+            Medalists = n())
+regionmedals <- regionmedals %>%
+  mutate(., Breakdown = paste0(regionmedals$region, ': ', #creating hover text for geochart
+                               regionmedals$Gold, ' Gold, ', 
+                               regionmedals$Silver, ' Silver, ', 
+                               regionmedals$Bronze, ' Bronze'))
+
+regionmedals
+
+
+```
+
+regionmedalsbyyear is the dataset used for the Time Series tab, similar except for the extra bucket of years was needed to plot the data correctly.
+
+```{r}
+regionmedalsbyyear <- byevent %>%
+  group_by(., region, Year) %>%
+  summarise(., Gold = sum(Medal == 'Gold'), 
+            Silver = sum(Medal == 'Silver'),
+            Bronze = sum(Medal == 'Bronze'),
+            Medalists = n())
+
+regionmedalsbyyear
+```
